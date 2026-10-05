@@ -1,0 +1,234 @@
+openapi: 3.0.3
+info:
+  title: URL Shortener API
+  version: 1.0.0
+paths:
+  /api/shorten:
+    post:
+      summary: Create short link
+      security:
+      - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShortenRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortenResponse'
+        '400':
+          description: Validation error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Alias already taken
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /{shortCode}:
+    get:
+      summary: Redirect to original URL
+      parameters:
+      - name: shortCode
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9A-Za-z_-]{3,32}$
+      responses:
+        '302':
+          description: Redirect
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+        '200':
+          description: Not used for redirects; reserved for HEAD-style probes
+        '400':
+          description: Invalid code format
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Not required for this endpoint; returned only if a gateway
+            enforces keys
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Unknown code
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '410':
+          description: Link expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /api/analytics/{shortCode}:
+    get:
+      summary: Get click analytics
+      parameters:
+      - name: shortCode
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsResponse'
+        '400':
+          description: Invalid code
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Not required in v1; returned only if a gateway enforces keys
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Unknown code
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '410':
+          description: Link expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    ShortenRequest:
+      type: object
+      required:
+      - url
+      properties:
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+        customAlias:
+          type: string
+          pattern: ^[0-9A-Za-z_-]{3,32}$
+        ttlDays:
+          type: integer
+          minimum: 1
+          maximum: 3650
+    ShortenResponse:
+      type: object
+      required:
+      - shortCode
+      - shortUrl
+      - originalUrl
+      - createdAt
+      properties:
+        shortCode:
+          type: string
+        shortUrl:
+          type: string
+          format: uri
+        originalUrl:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+    AnalyticsResponse:
+      type: object
+      required:
+      - shortCode
+      - totalClicks
+      properties:
+        shortCode:
+          type: string
+        originalUrl:
+          type: string
+        totalClicks:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string

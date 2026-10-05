@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: url-shortener
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/shortener}
+    username: ${DB_USERNAME:shortener}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+app:
+  security:
+    api-key: ${SHORTENER_API_KEY}
+  rate-limit:
+    requests-per-minute: 60
+  link:
+    default-ttl-days: 30
+  analytics:
+    flush-interval-ms: 5000
+  cache:
+    redirect-ttl-seconds: 3600
+  base-url: ${APP_BASE_URL:http://localhost:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
